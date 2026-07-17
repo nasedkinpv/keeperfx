@@ -187,13 +187,16 @@ TbBool defined_keys_that_have_been_swapped[GAME_KEYS_COUNT] = { false };
 
 static void get_button_snapping_inputs(void)
 {
+    static TbControllerButtons previous_snap_buttons;
     struct PlayerInfo* player = get_my_player();
     if (player->view_type == PVT_CreatureContrl)
         return;
 
     TbControllerButtons snapbtns = get_game_key_controller_buttons(Gkey_ButtonSnapRight)|get_game_key_controller_buttons(Gkey_ButtonSnapLeft)|get_game_key_controller_buttons(Gkey_ButtonSnapUp)|get_game_key_controller_buttons(Gkey_ButtonSnapDown);
     TbControllerButtons relevant_buttons = controller_button_state & snapbtns;
-    if ((relevant_buttons == 0) || (relevant_buttons != controller_button_state)) {
+    TbBool direction_changed = relevant_buttons != previous_snap_buttons;
+    previous_snap_buttons = relevant_buttons;
+    if (!direction_changed || (relevant_buttons == 0) || (relevant_buttons != controller_button_state)) {
         return;
     }
 
@@ -201,8 +204,6 @@ static void get_button_snapping_inputs(void)
     float snap_y = get_game_key_axis_value(Gkey_ButtonSnapDown, false)  - get_game_key_axis_value(Gkey_ButtonSnapUp, false);
     
     snap_to_direction(GetMouseX(), GetMouseY(), snap_x, snap_y);
-
-    controller_button_state = 0;
 }
 
 static float get_input_delta_time()
