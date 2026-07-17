@@ -51,10 +51,12 @@ use `[` and `]` as dedicated rotation keys. Bindings remain customizable in the
 in-game options.
 
 KeeperFX keeps its original 8-bit, palette-based software renderer. On macOS,
-SDL3 presents that surface through a native Metal renderer and `CAMetalLayer`;
-KeeperFX explicitly requests the Metal backend, enables synchronized
-presentation, and identifies the SDR output as sRGB so Core Animation can
-colour-match it to the current display.
+a native Metal presenter uploads that indexed framebuffer as an `R8Uint`
+texture, applies the 256-colour palette in a fragment shader, and displays it
+through an sRGB `CAMetalLayer`. The game continues to render in logical macOS
+coordinates while Metal scales to the Retina drawable's native pixels. The
+presenter uses display synchronization and three resources in flight; the
+original SDL surface path remains available as a fallback.
 
 For crisp graphics, prefer resolutions that are integer multiples of the
 original 320x200 frame, such as 1280x800 (4x) or 1600x1000 (5x). MetalFX is not

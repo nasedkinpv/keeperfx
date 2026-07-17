@@ -1,24 +1,23 @@
 /******************************************************************************/
 /** @file macos_metal.h
- *  Small macOS-specific adjustments for SDL's Metal presentation layer.
+ *  Retina Metal presentation for the macOS build.
  */
 /******************************************************************************/
 
 #ifndef DK_MACOS_METAL_H
 #define DK_MACOS_METAL_H
 
-#include <SDL2/SDL_render.h>
+#include <SDL2/SDL.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * Marks SDL's Metal layer as opaque, colour-managed sRGB content.
- *
- * @return Non-zero when the renderer is Metal and the layer was configured.
- */
-int LbMacOSConfigureMetalLayer(SDL_Renderer *renderer);
+int LbMacOSMetalCreate(SDL_Window *window, int width, int height);
+void LbMacOSMetalDestroy(void);
+int LbMacOSMetalIsActive(void);
+int LbMacOSMetalPresent(const void *pixels, int pitch, const SDL_Color *palette);
+void LbMacOSMetalGetDrawableSize(int *width, int *height);
 
 #ifdef __cplusplus
 }

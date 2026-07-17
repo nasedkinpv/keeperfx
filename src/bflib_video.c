@@ -145,6 +145,16 @@ TbResult LbScreenSwap(void)
     int blresult;
     SYNCDBG(12,"Starting");
     TbResult ret = LbMouseOnBeginSwap();
+#ifdef __APPLE__
+    if ((ret == Lb_SUCCESS) && LbMacOSMetalIsActive()) {
+        if (!LbMacOSMetalPresent(lbDrawSurface->pixels, lbDrawSurface->pitch, lbPaletteColors)) {
+            ERRORDBG(11,"Metal present failed: %s",SDL_GetError());
+            ret = Lb_FAIL;
+        }
+        LbMouseOnEndSwap();
+        return ret;
+    }
+#endif
     // Put the data from Draw Surface onto Screen Surface
     if ((ret == Lb_SUCCESS) && (lbHasSecondSurface)) {
         // Update pointer to window surface on every frame
@@ -540,9 +550,13 @@ TbResult LbScreenSetup(TbScreenMode mode, TbScreenCoord width, TbScreenCoord hei
     SDL_Surface* prevScreenSurf = lbScreenSurface;
     LbMouseChangeSprite(NULL);
 
+#ifdef __APPLE__
+    LbMacOSMetalDestroy();
+#endif
     if (lbHasSecondSurface) {
         SDL_FreeSurface(lbDrawSurface);
     }
+    lbHasSecondSurface = false;
     lbDrawSurface = NULL;
     lbScreenInitialised = false;
 
@@ -596,39 +610,69 @@ TbResult LbScreenSetup(TbScreenMode mode, TbScreenCoord width, TbScreenCoord hei
     }
     // If the game window doesn't yet exists
     if (lbWindow == NULL) {
-        lbWindow = SDL_CreateWindow(lbDrawAreaTitle, mdinfo->window_pos_x, mdinfo->window_pos_y, mdinfo->Width, mdinfo->Height, mdinfo->sdlFlags);
+        Uint32 window_flags = mdinfo->sdlFlags;
+#ifdef __APPLE__
+        window_flags |= SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_METAL;
+#endif
+        lbWindow = SDL_CreateWindow(lbDrawAreaTitle, mdinfo->window_pos_x, mdinfo->window_pos_y, mdinfo->Width, mdinfo->Height, window_flags);
     }
     if (lbWindow == NULL) {
         ERRORLOG("SDL_CreateWindow failed for mode %d (%s): %s", (int)mode, mdinfo->Desc, SDL_GetError());
         return Lb_FAIL;
     }
-    lbScreenSurface = lbDrawSurface = SDL_GetWindowSurface( lbWindow );
-    if (lbScreenSurface == NULL) {
-        ERRORLOG("Failed to initialize mode %d (%s): %s", (int)mode, mdinfo->Desc, SDL_GetError());
-        return Lb_FAIL;
-    }
+    TbBool macos_metal_active = false;
 #ifdef __APPLE__
-    {
-        SDL_Renderer *renderer = SDL_GetRenderer(lbWindow);
-        SDL_RendererInfo renderer_info = {0};
-        if ((renderer != NULL) && (SDL_GetRendererInfo(renderer, &renderer_info) == 0)) {
-            const TbBool colour_managed = LbMacOSConfigureMetalLayer(renderer);
-            SYNCLOG("macOS presentation backend: %s%s", renderer_info.name,
-                colour_managed ? " (sRGB colour managed)" : "");
+    if (LbMacOSMetalCreate(lbWindow, mdinfo->Width, mdinfo->Height)) {
+        macos_metal_active = true;
+        lbScreenSurface = NULL;
+        lbDrawSurface = SDL_CreateRGBSurface(0, mdinfo->Width, mdinfo->Height,
+            lbEngineBPP, 0, 0, 0, 0);
+        if (lbDrawSurface == NULL) {
+            ERRORLOG("Can't create Metal draw surface for mode %d (%s): %s",
+                (int)mode, mdinfo->Desc, SDL_GetError());
+            LbMacOSMetalDestroy();
+            return Lb_FAIL;
+        }
+        lbHasSecondSurface = true;
+        int drawable_width = 0;
+        int drawable_height = 0;
+        LbMacOSMetalGetDrawableSize(&drawable_width, &drawable_height);
+        SYNCLOG("macOS Retina presenter: Metal R8 %dx%d -> %dx%d (sRGB)",
+            (int)mdinfo->Width, (int)mdinfo->Height, drawable_width, drawable_height);
+    } else {
+        char metal_error[256];
+        snprintf(metal_error, sizeof(metal_error), "%s", SDL_GetError());
+        WARNLOG("Metal Retina presenter unavailable, using SDL surface: %s", metal_error);
+        LbMacOSMetalDestroy();
+        SDL_DestroyWindow(lbWindow);
+        lbWindow = SDL_CreateWindow(lbDrawAreaTitle, mdinfo->window_pos_x,
+            mdinfo->window_pos_y, mdinfo->Width, mdinfo->Height, mdinfo->sdlFlags);
+        if (lbWindow == NULL) {
+            ERRORLOG("SDL fallback window failed for mode %d (%s): %s",
+                (int)mode, mdinfo->Desc, SDL_GetError());
+            return Lb_FAIL;
         }
     }
 #endif
 
-    // Create secondary surface if necessary, that is if BPP != lbEngineBPP.
-    if (mdinfo->BitsPerPixel != lbEngineBPP)
-    {
-        lbDrawSurface = SDL_CreateRGBSurface(0, mdinfo->Width, mdinfo->Height, lbEngineBPP, 0, 0, 0, 0);
-        if (lbDrawSurface == NULL) {
-            ERRORLOG("Can't create secondary surface for mode %d (%s): %s", (int)mode, mdinfo->Desc, SDL_GetError());
-            LbScreenReset(false);
+    if (!macos_metal_active) {
+        lbScreenSurface = lbDrawSurface = SDL_GetWindowSurface(lbWindow);
+        if (lbScreenSurface == NULL) {
+            ERRORLOG("Failed to initialize mode %d (%s): %s", (int)mode, mdinfo->Desc, SDL_GetError());
             return Lb_FAIL;
         }
-        lbHasSecondSurface = true;
+
+        // Create secondary surface if necessary, that is if BPP != lbEngineBPP.
+        if (mdinfo->BitsPerPixel != lbEngineBPP)
+        {
+            lbDrawSurface = SDL_CreateRGBSurface(0, mdinfo->Width, mdinfo->Height, lbEngineBPP, 0, 0, 0, 0);
+            if (lbDrawSurface == NULL) {
+                ERRORLOG("Can't create secondary surface for mode %d (%s): %s", (int)mode, mdinfo->Desc, SDL_GetError());
+                LbScreenReset(false);
+                return Lb_FAIL;
+            }
+            lbHasSecondSurface = true;
+        }
     }
 
     lbDisplay.DrawFlags = 0;
@@ -644,7 +688,7 @@ TbResult LbScreenSetup(TbScreenMode mode, TbScreenCoord width, TbScreenCoord hei
     lbDisplay.WScreen = NULL;
     lbDisplay.GraphicsWindowPtr = NULL;
     lbScreenInitialised = true;
-    SYNCLOG("Mode %dx%dx%d setup succeeded",(int)lbScreenSurface->w,(int)lbScreenSurface->h,(int)lbScreenSurface->format->BitsPerPixel);
+    SYNCLOG("Mode %dx%dx%d setup succeeded",(int)lbDrawSurface->w,(int)lbDrawSurface->h,(int)lbDrawSurface->format->BitsPerPixel);
     if (palette != NULL)
     {
         LbPaletteSet(palette);
@@ -799,6 +843,9 @@ TbResult LbScreenReset(TbBool exiting_application)
     if (!lbScreenInitialised)
       return Lb_FAIL;
     LbMouseChangeSprite(NULL);
+#ifdef __APPLE__
+    LbMacOSMetalDestroy();
+#endif
     if (lbHasSecondSurface) {
         SDL_FreeSurface(lbDrawSurface);
     }

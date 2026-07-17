@@ -59,6 +59,7 @@ KFX_LDFLAGS += \
 	$(shell $(PKG_CONFIG) --libs sdl2 SDL2_mixer SDL2_net SDL2_image libavformat libavcodec libswresample libavutil openal luajit spng minizip zlib miniupnpc libcurl) \
 	-L$(HOMEBREW_PREFIX)/opt/libnatpmp/lib -lnatpmp \
 	-framework CoreGraphics \
+	-framework Metal \
 	-framework QuartzCore \
 	-liconv
 
