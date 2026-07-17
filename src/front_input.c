@@ -108,15 +108,25 @@ enum ZoomToMouseOptions zoom_to_mouse_option = ZoomToMouse_Always;
 enum RotateAroundMouseOptions rotate_around_mouse_option = RotateAroundMouse_Always;
 TbBool rotate_follow_mouse_option = false;
 
+#if defined(__APPLE__)
+#define DEFAULT_ROTATE_MOD  KC_LALT
+#define DEFAULT_ROTATE_CW   KC_LBRACKET
+#define DEFAULT_ROTATE_CCW  KC_RBRACKET
+#else
+#define DEFAULT_ROTATE_MOD  KC_LCONTROL
+#define DEFAULT_ROTATE_CW   KC_DELETE
+#define DEFAULT_ROTATE_CCW  KC_PGDOWN
+#endif
+
 const struct GamekeySettings game_key_settings[GAME_KEYS_COUNT] = {
     {"MoveUp",                GUIStr_CtrlUp,                  KC_W, KMod_NONE,               CBtn_LS_UP,               BMV_Visible,        },       // Gkey_MoveUp
     {"MoveDown",              GUIStr_CtrlDown,                KC_S, KMod_NONE,               CBtn_LS_DOWN,             BMV_Visible,        },       // Gkey_MoveDown
     {"MoveLeft",              GUIStr_CtrlLeft,                KC_A, KMod_NONE,               CBtn_LS_LEFT,             BMV_Visible,        },       // Gkey_MoveLeft
     {"MoveRight",             GUIStr_CtrlRight,               KC_D, KMod_NONE,               CBtn_LS_RIGHT,            BMV_Visible,        },       // Gkey_MoveRight
-    {"RotateMod",             GUIStr_CtrlRotate,              KC_LCONTROL, KMod_NONE,        CBtn_B,                   BMV_Visible,        },       // Gkey_RotateMod
+    {"RotateMod",             GUIStr_CtrlRotate,              DEFAULT_ROTATE_MOD, KMod_NONE, CBtn_B,                   BMV_Visible,        },       // Gkey_RotateMod
     {"SpeedMod",              GUIStr_CtrlSpeed,               KC_LSHIFT, KMod_NONE,          CBtn_A,                   BMV_Visible,        },       // Gkey_SpeedMod
-    {"RotateCW",              GUIStr_CtrlRotateLeft,          KC_DELETE, KMod_NONE,          CBtn_A|CBtn_DPAD_LEFT,    BMV_Visible,        },       // Gkey_RotateCW
-    {"RotateCCW",             GUIStr_CtrlRotateRight,         KC_PGDOWN, KMod_NONE,          CBtn_A|CBtn_DPAD_RIGHT,   BMV_Visible,        },       // Gkey_RotateCCW
+    {"RotateCW",              GUIStr_CtrlRotateLeft,          DEFAULT_ROTATE_CW, KMod_NONE,  CBtn_A|CBtn_DPAD_LEFT,    BMV_Visible,        },       // Gkey_RotateCW
+    {"RotateCCW",             GUIStr_CtrlRotateRight,         DEFAULT_ROTATE_CCW, KMod_NONE, CBtn_A|CBtn_DPAD_RIGHT,   BMV_Visible,        },       // Gkey_RotateCCW
     {"ZoomIn",                GUIStr_CtrlZoomIn,              KC_HOME, KMod_NONE,            CBtn_A|CBtn_DPAD_UP,      BMV_Visible,        },       // Gkey_ZoomIn
     {"ZoomOut",               GUIStr_CtrlZoomOut,             KC_END, KMod_NONE,             CBtn_A|CBtn_DPAD_DOWN,    BMV_Visible,        },       // Gkey_ZoomOut
     {"ZoomRoomTreasure",      CpgStr_RoomKind1+0,             KC_T, KMod_NONE,               CBtn_NONE,                BMV_Visible,        },       // Gkey_ZoomRoomTreasure

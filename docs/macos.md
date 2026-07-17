@@ -42,3 +42,16 @@ files in:
 The required original files are listed in
 `docs/files_required_from_original_dk.txt`. They can be copied from an original
 CD or a legitimately purchased digital edition.
+
+## macOS controls and display
+
+The macOS defaults avoid Control+Arrow, which is reserved by Mission Control
+for switching Spaces. Hold Option with the arrow keys to rotate the camera, or
+use `[` and `]` as dedicated rotation keys. Bindings remain customizable in the
+in-game options.
+
+For crisp software-rendered graphics, prefer resolutions that are integer
+multiples of the original 320x200 frame, such as 1280x800 (4x) or 1600x1000
+(5x). MetalFX is not used because KeeperFX renders directly into an SDL surface
+at the selected output resolution rather than into a lower-resolution Metal
+texture.
