@@ -52,11 +52,26 @@ in-game options.
 
 KeeperFX keeps its original 8-bit, palette-based software renderer. On macOS,
 a native Metal presenter uploads that indexed framebuffer as an `R8Uint`
-texture, applies the 256-colour palette in a fragment shader, and displays it
-through an sRGB `CAMetalLayer`. The game continues to render in logical macOS
+texture, expands the original 6-bit VGA palette to its full range, and converts
+it to linear sRGB. A conservative colour grade, adaptive luminance sharpening,
+and stable palette dithering are then applied before an sRGB Metal attachment
+performs the output transfer. High-contrast edges are excluded from sharpening
+to preserve pixel-art UI. The game continues to render in logical macOS
 coordinates while Metal scales to the Retina drawable's native pixels. The
 presenter uses display synchronization and three resources in flight; the
 original SDL surface path remains available as a fallback.
+
+The native post-processing defaults can be tuned with macOS preferences. The
+default values are `MetalSaturation=1.03`, `MetalContrast=1.015`,
+`MetalSharpness=0.08`, and `MetalDither=0.75`. For example:
+
+```sh
+defaults write org.keeperfx.KeeperFX MetalSharpness -float 0
+defaults write org.keeperfx.KeeperFX MetalSaturation -float 1
+```
+
+Delete an individual preference to restore its default. Changes take effect
+the next time KeeperFX starts.
 
 For crisp graphics, prefer resolutions that are integer multiples of the
 original 320x200 frame, such as 1280x800 (4x) or 1600x1000 (5x). MetalFX is not

@@ -7,20 +7,27 @@
 #include "macos_metal.h"
 
 #import <CoreGraphics/CoreGraphics.h>
+#import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
+#include <math.h>
 #include <stdint.h>
 #include <string.h>
 
 #define KFX_METAL_FRAMES_IN_FLIGHT 3
 
 typedef struct KfxMetalPaletteEntry {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
-    uint8_t a;
+    float r;
+    float g;
+    float b;
+    float a;
 } KfxMetalPaletteEntry;
+
+typedef struct KfxMetalPostProcess {
+    float sharpness;
+    float dither;
+} KfxMetalPostProcess;
 
 static struct {
     SDL_Window *window;
@@ -34,6 +41,9 @@ static struct {
     int width;
     int height;
     unsigned int frame_index;
+    float saturation;
+    float contrast;
+    KfxMetalPostProcess post_process;
 } kfx_metal;
 
 static const char *kfx_metal_shader_source =
@@ -45,13 +55,83 @@ static const char *kfx_metal_shader_source =
     "  const float2 texcoords[] = { float2(0.0, 1.0), float2(2.0, 1.0), float2(0.0, -1.0) };\n"
     "  return { float4(positions[vertex_id], 0.0, 1.0), texcoords[vertex_id] };\n"
     "}\n"
+    "struct PostProcess { float sharpness; float dither; };\n"
+    "inline float3 kfx_colour(texture2d<uint, access::read> indices,\n"
+    "    constant float4 *palette, int2 pixel, uint2 size) {\n"
+    "  const int2 clipped = clamp(pixel, int2(0), int2(size) - 1);\n"
+    "  return palette[indices.read(uint2(clipped)).r].rgb;\n"
+    "}\n"
+    "inline float kfx_luma(float3 colour) {\n"
+    "  return dot(colour, float3(0.2126, 0.7152, 0.0722));\n"
+    "}\n"
     "fragment float4 kfx_fragment(VertexOut in [[stage_in]],\n"
     "    texture2d<uint, access::read> indices [[texture(0)]],\n"
-    "    constant uchar4 *palette [[buffer(0)]]) {\n"
+    "    constant float4 *palette [[buffer(0)]],\n"
+    "    constant PostProcess &post [[buffer(1)]]) {\n"
     "  const uint2 size(indices.get_width(), indices.get_height());\n"
     "  const uint2 pixel = min(uint2(in.texcoord * float2(size)), size - 1);\n"
-    "  return float4(palette[indices.read(pixel).r]) / 255.0;\n"
+    "  const int2 p = int2(pixel);\n"
+    "  const float3 centre = kfx_colour(indices, palette, p, size);\n"
+    "  const float3 left = kfx_colour(indices, palette, p + int2(-1, 0), size);\n"
+    "  const float3 right = kfx_colour(indices, palette, p + int2(1, 0), size);\n"
+    "  const float3 up = kfx_colour(indices, palette, p + int2(0, -1), size);\n"
+    "  const float3 down = kfx_colour(indices, palette, p + int2(0, 1), size);\n"
+    "  const float3 average = (left + right + up + down) * 0.25;\n"
+    "  const float centre_luma = kfx_luma(centre);\n"
+    "  float darkest = min(min(kfx_luma(left), kfx_luma(right)),\n"
+    "      min(kfx_luma(up), kfx_luma(down)));\n"
+    "  float lightest = max(max(kfx_luma(left), kfx_luma(right)),\n"
+    "      max(kfx_luma(up), kfx_luma(down)));\n"
+    "  darkest = min(darkest, centre_luma);\n"
+    "  lightest = max(lightest, centre_luma);\n"
+    "  const float local_range = lightest - darkest;\n"
+    "  const float edge_mask = smoothstep(0.01, 0.08, local_range) *\n"
+    "      (1.0 - smoothstep(0.35, 0.65, local_range));\n"
+    "  float3 colour = saturate(centre + (centre - average) * post.sharpness * edge_mask);\n"
+    "  const float noise = fract(52.9829189 * fract(dot(float2(pixel),\n"
+    "      float2(0.06711056, 0.00583715)))) - 0.5;\n"
+    "  // Approximate the linear-light size of one encoded sRGB step.\n"
+    "  const float3 srgb_step = max(float3(1.0 / 12.92),\n"
+    "      (2.4 / 1.055) * sqrt(max(colour, float3(0.0))));\n"
+    "  colour += noise * (post.dither / 255.0) * srgb_step;\n"
+    "  return float4(saturate(colour), 1.0);\n"
     "}\n";
+
+static float kfx_metal_preference(NSString *key, float fallback, float minimum, float maximum)
+{
+    id value = [[NSUserDefaults standardUserDefaults] objectForKey:key];
+    float result = (value != nil) ? [value floatValue] : fallback;
+    return fminf(fmaxf(result, minimum), maximum);
+}
+
+static float kfx_srgb_to_linear(uint8_t component)
+{
+    // KeeperFX expands its 6-bit VGA palette to 0..252. Map that full DAC
+    // range to 0..1 before entering the linear-light Metal pipeline.
+    const float encoded = fminf((float)component / 252.0f, 1.0f);
+    if (encoded <= 0.04045f) {
+        return encoded / 12.92f;
+    }
+    return powf((encoded + 0.055f) / 1.055f, 2.4f);
+}
+
+static void kfx_metal_update_palette(KfxMetalPaletteEntry *destination,
+    const SDL_Color *palette)
+{
+    for (int i = 0; i < 256; i++) {
+        float r = kfx_srgb_to_linear(palette[i].r);
+        float g = kfx_srgb_to_linear(palette[i].g);
+        float b = kfx_srgb_to_linear(palette[i].b);
+        const float luminance = r * 0.2126f + g * 0.7152f + b * 0.0722f;
+        r = luminance + (r - luminance) * kfx_metal.saturation;
+        g = luminance + (g - luminance) * kfx_metal.saturation;
+        b = luminance + (b - luminance) * kfx_metal.saturation;
+        destination[i].r = fminf(fmaxf((r - 0.18f) * kfx_metal.contrast + 0.18f, 0.0f), 1.0f);
+        destination[i].g = fminf(fmaxf((g - 0.18f) * kfx_metal.contrast + 0.18f, 0.0f), 1.0f);
+        destination[i].b = fminf(fmaxf((b - 0.18f) * kfx_metal.contrast + 0.18f, 0.0f), 1.0f);
+        destination[i].a = 1.0f;
+    }
+}
 
 void LbMacOSMetalDestroy(void)
 {
@@ -76,6 +156,10 @@ int LbMacOSMetalCreate(SDL_Window *window, int width, int height)
         kfx_metal.window = window;
         kfx_metal.width = width;
         kfx_metal.height = height;
+        kfx_metal.saturation = kfx_metal_preference(@"MetalSaturation", 1.03f, 0.0f, 2.0f);
+        kfx_metal.contrast = kfx_metal_preference(@"MetalContrast", 1.015f, 0.5f, 2.0f);
+        kfx_metal.post_process.sharpness = kfx_metal_preference(@"MetalSharpness", 0.08f, 0.0f, 1.0f);
+        kfx_metal.post_process.dither = kfx_metal_preference(@"MetalDither", 0.75f, 0.0f, 2.0f);
         kfx_metal.view = SDL_Metal_CreateView(window);
         if (kfx_metal.view == NULL) {
             LbMacOSMetalDestroy();
@@ -90,9 +174,9 @@ int LbMacOSMetalCreate(SDL_Window *window, int width, int height)
         }
 
         kfx_metal.layer.device = kfx_metal.device;
-        // Palette entries are already sRGB encoded, so keep their numeric
-        // values in an unorm target and let Core Animation colour-match it.
-        kfx_metal.layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        // The shader works in linear light. The sRGB attachment performs the
+        // final transfer-function conversion before Core Animation matches it.
+        kfx_metal.layer.pixelFormat = MTLPixelFormatBGRA8Unorm_sRGB;
         kfx_metal.layer.framebufferOnly = YES;
         kfx_metal.layer.opaque = YES;
         kfx_metal.layer.displaySyncEnabled = YES;
@@ -212,12 +296,7 @@ int LbMacOSMetalPresent(const void *pixels, int pitch, const SDL_Color *palette)
             mipmapLevel:0 withBytes:pixels bytesPerRow:pitch];
 
         KfxMetalPaletteEntry *metal_palette = (KfxMetalPaletteEntry *)palette_buffer.contents;
-        for (int i = 0; i < 256; i++) {
-            metal_palette[i].r = palette[i].r;
-            metal_palette[i].g = palette[i].g;
-            metal_palette[i].b = palette[i].b;
-            metal_palette[i].a = 255;
-        }
+        kfx_metal_update_palette(metal_palette, palette);
 
         id<MTLCommandBuffer> command_buffer = [kfx_metal.command_queue commandBuffer];
         if (command_buffer == nil) {
@@ -237,6 +316,8 @@ int LbMacOSMetalPresent(const void *pixels, int pitch, const SDL_Color *palette)
         [encoder setRenderPipelineState:kfx_metal.pipeline];
         [encoder setFragmentTexture:index_texture atIndex:0];
         [encoder setFragmentBuffer:palette_buffer offset:0 atIndex:0];
+        [encoder setFragmentBytes:&kfx_metal.post_process
+            length:sizeof(kfx_metal.post_process) atIndex:1];
         [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
         [encoder endEncoding];
         [command_buffer presentDrawable:drawable];
