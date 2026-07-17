@@ -63,6 +63,7 @@ struct Message {
 	Message(MessageType _type, long _duration)
 	: type(_type), duration(_duration)
 	{}
+	virtual ~Message() = default;
 
 	virtual bool is(const Message &) const noexcept = 0;
 	virtual void play() const noexcept = 0;

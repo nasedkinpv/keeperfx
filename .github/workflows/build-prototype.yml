@@ -91,3 +91,54 @@ jobs:
       with:
         name: ${{ env.LINUX_ARTIFACT_NAME }}
         path: bin/keeperfx
+
+  build-prototype-macos:
+    name: "Build Prototype macOS arm64"
+    runs-on: macos-26
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: |
+        brew install \
+          cmake \
+          pkgconf \
+          sdl2 \
+          sdl2_mixer \
+          sdl2_net \
+          sdl2_image \
+          ffmpeg \
+          openal-soft \
+          luajit \
+          libspng \
+          minizip \
+          miniupnpc \
+          libnatpmp \
+          curl
+
+    - name: Build
+      run: |
+        set -eux
+        BUILD_NUMBER=$(git rev-list --count origin/master)
+        GITHUB_SHA=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH")
+        PACKAGE_SUFFIX=Prototype_$(git rev-parse --short=7 "$GITHUB_SHA")
+        make -f macos.mk -j"$(sysctl -n hw.logicalcpu)" \
+          BUILD_NUMBER="$BUILD_NUMBER" \
+          VER_SUFFIX="$PACKAGE_SUFFIX" \
+          app
+
+    - name: Verify app bundle
+      run: |
+        set -eux
+        file bin/KeeperFX.app/Contents/MacOS/keeperfx | grep 'Mach-O 64-bit executable arm64'
+        plutil -lint bin/KeeperFX.app/Contents/Info.plist
+        codesign --verify --deep --strict bin/KeeperFX.app
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: keeperfx-macos-arm64
+        path: bin/KeeperFX.app

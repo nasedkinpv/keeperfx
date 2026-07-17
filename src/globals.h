@@ -31,7 +31,7 @@
 #include <time.h>
 #include <assert.h>
 
-#if defined(unix) && !defined(GO32)
+#if !defined(_WIN32) && !defined(GO32)
 #include <unistd.h>
 #include <signal.h>
 #include <sys/ioctl.h>
@@ -69,7 +69,7 @@ extern "C" {
 
 // Basic Definitions
 
-#if defined(unix) && !defined (GO32)
+#if !defined(_WIN32) && !defined(GO32)
 #define SEPARATOR "/"
 #else
 #define SEPARATOR "\\"

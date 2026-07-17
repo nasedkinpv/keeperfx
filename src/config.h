@@ -118,8 +118,9 @@ enum TbConfigLoadFlags {
     CnfLd_PreListed     =  0x08, /**< Already parsed the names. */
 };
 
+#if !defined(__APPLE__)
 #pragma pack(1)
-
+#endif
 
 /******************************************************************************/
 
@@ -259,7 +260,9 @@ struct ConfigFileData{
 /******************************************************************************/
 extern char keeper_runtime_directory[152];
 
+#if !defined(__APPLE__)
 #pragma pack()
+#endif
 /******************************************************************************/
 extern unsigned long text_line_number;
 /******************************************************************************/

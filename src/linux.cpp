@@ -4,6 +4,8 @@
 #include "bflib_fileio.h"
 #include "cdrom.h"
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
 #include <ctype.h>
 #include <string>
 #include <memory>
@@ -15,8 +17,35 @@
 #include <unistd.h>
 #include <fnmatch.h>
 
+#if defined(__APPLE__)
+static void use_macos_data_directory(const char * executable)
+{
+    const char * data_directory = getenv("KEEPERFX_DATA_DIR");
+    std::string default_directory;
+
+    if ((!data_directory || !data_directory[0]) && executable && strstr(executable, ".app/Contents/MacOS/")) {
+        const char * home_directory = getenv("HOME");
+        if (home_directory && home_directory[0]) {
+            default_directory = std::string(home_directory) + "/Library/Application Support/KeeperFX";
+            data_directory = default_directory.c_str();
+        }
+    }
+
+    if (data_directory && data_directory[0]) {
+        mkdir(data_directory, 0755);
+        if (chdir(data_directory) != 0) {
+            perror("KeeperFX data directory");
+        }
+    }
+}
+#endif
+
 extern "C" const char * get_os_version() {
+#if defined(__APPLE__)
+    return "macOS";
+#else
     return "Linux";
+#endif
 }
 
 extern "C" const void * get_image_base()
@@ -41,13 +70,13 @@ extern "C" void install_exception_handler()
 
 extern "C" int steam_api_init()
 {
-    // Steam not supported on Linux
+    // Steam not supported on native POSIX builds
     return 0;
 }
 
 extern "C" void steam_api_shutdown()
 {
-    // Steam not supported on Linux
+    // Steam not supported on native POSIX builds
 }
 
 extern "C" void SetRedbookVolume(SoundVolume)
@@ -167,6 +196,9 @@ extern "C" void LbFileFindEnd(TbFileFind * ff)
 	delete ff;
 }
 
-extern "C" int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
+#if defined(__APPLE__)
+	use_macos_data_directory((argc > 0) ? argv[0] : nullptr);
+#endif
 	return kfxmain(argc, argv);
 }
