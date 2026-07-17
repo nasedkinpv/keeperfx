@@ -1,0 +1,31 @@
+{
+  "version": 4,
+  "name": "keeperfx.zip",
+  "items": [
+    "KeeperFX.sh",
+    "keeperfx"
+  ],
+  "items_opt": null,
+  "attr": {
+    "title": "KeeperFX",
+    "desc": "Open-source engine for Dungeon Keeper with native controller support.",
+    "inst": "Copy a legal KeeperFX/Dungeon Keeper data set into the keeperfx folder.",
+    "genres": [
+      "strategy"
+    ],
+    "porter": [
+      "nasedkinpv"
+    ],
+    "image": null,
+    "rtr": false,
+    "exp": true,
+    "runtime": [],
+    "store": [],
+    "availability": "full",
+    "reqs": [],
+    "arch": [
+      "aarch64"
+    ],
+    "min_glibc": "2.39"
+  }
+}

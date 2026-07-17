@@ -1,0 +1,10 @@
+.git
+bin
+obj
+pkg
+src/ver_defs.h
+deps/*
+!deps/centitoml/
+!deps/centitoml/**
+!deps/dr_mp3.h
+*.tar.gz

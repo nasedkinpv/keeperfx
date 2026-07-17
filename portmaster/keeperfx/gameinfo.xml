@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gameList>
+  <game>
+    <path>./KeeperFX.sh</path>
+    <name>KeeperFX</name>
+    <desc>KeeperFX is an open-source engine recreation and expansion of Dungeon Keeper.</desc>
+    <releasedate>20260717T000000</releasedate>
+    <developer>KeeperFX Team</developer>
+    <publisher>KeeperFX Team</publisher>
+    <genre>Strategy</genre>
+  </game>
+</gameList>
