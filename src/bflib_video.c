@@ -30,6 +30,9 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_syswm.h>
+#ifdef __APPLE__
+#include "macos_metal.h"
+#endif
 #include <math.h>
 #include "post_inc.h"
 
@@ -505,6 +508,12 @@ TbResult LbScreenInitialize(void)
         LbRegisterStandardVideoModes();
         LbRegisterModernVideoModes(); // register modern and flexible custom modes
     }
+#ifdef __APPLE__
+    // SDL3 presents SDL window surfaces through its render API. Prefer its
+    // native Metal backend and synchronize presentation with the display.
+    SDL_SetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION, "metal");
+    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+#endif
     // Initialize SDL library
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         ERRORLOG("SDL init: %s",SDL_GetError());
@@ -598,6 +607,17 @@ TbResult LbScreenSetup(TbScreenMode mode, TbScreenCoord width, TbScreenCoord hei
         ERRORLOG("Failed to initialize mode %d (%s): %s", (int)mode, mdinfo->Desc, SDL_GetError());
         return Lb_FAIL;
     }
+#ifdef __APPLE__
+    {
+        SDL_Renderer *renderer = SDL_GetRenderer(lbWindow);
+        SDL_RendererInfo renderer_info = {0};
+        if ((renderer != NULL) && (SDL_GetRendererInfo(renderer, &renderer_info) == 0)) {
+            const TbBool colour_managed = LbMacOSConfigureMetalLayer(renderer);
+            SYNCLOG("macOS presentation backend: %s%s", renderer_info.name,
+                colour_managed ? " (sRGB colour managed)" : "");
+        }
+    }
+#endif
 
     // Create secondary surface if necessary, that is if BPP != lbEngineBPP.
     if (mdinfo->BitsPerPixel != lbEngineBPP)

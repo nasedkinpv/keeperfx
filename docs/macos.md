@@ -50,8 +50,14 @@ for switching Spaces. Hold Option with the arrow keys to rotate the camera, or
 use `[` and `]` as dedicated rotation keys. Bindings remain customizable in the
 in-game options.
 
-For crisp software-rendered graphics, prefer resolutions that are integer
-multiples of the original 320x200 frame, such as 1280x800 (4x) or 1600x1000
-(5x). MetalFX is not used because KeeperFX renders directly into an SDL surface
-at the selected output resolution rather than into a lower-resolution Metal
-texture.
+KeeperFX keeps its original 8-bit, palette-based software renderer. On macOS,
+SDL3 presents that surface through a native Metal renderer and `CAMetalLayer`;
+KeeperFX explicitly requests the Metal backend, enables synchronized
+presentation, and identifies the SDR output as sRGB so Core Animation can
+colour-match it to the current display.
+
+For crisp graphics, prefer resolutions that are integer multiples of the
+original 320x200 frame, such as 1280x800 (4x) or 1600x1000 (5x). MetalFX is not
+used: its spatial and temporal reconstruction targets lower-resolution 3D
+render targets, while filtering KeeperFX's final palette image would soften
+pixel art and the user interface.

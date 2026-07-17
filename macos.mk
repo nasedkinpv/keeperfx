@@ -26,6 +26,10 @@ CODESIGN_IDENTITY ?= -
 
 include posix_sources.mk
 
+KFX_OBJC_SOURCES = src/macos_metal.m
+KFX_OBJC_OBJECTS = $(patsubst src/%.m,obj/%.o,$(KFX_OBJC_SOURCES))
+KFX_OBJECTS += $(KFX_OBJC_OBJECTS)
+
 KFX_INCLUDES = \
 	-Ideps/centijson/include \
 	-Ideps/centitoml \
@@ -54,6 +58,8 @@ KFX_LDFLAGS += \
 	-Ldeps/enet6 -lenet6 \
 	$(shell $(PKG_CONFIG) --libs sdl2 SDL2_mixer SDL2_net SDL2_image libavformat libavcodec libswresample libavutil openal luajit spng minizip zlib miniupnpc libcurl) \
 	-L$(HOMEBREW_PREFIX)/opt/libnatpmp/lib -lnatpmp \
+	-framework CoreGraphics \
+	-framework QuartzCore \
 	-liconv
 
 TOML_SOURCES = \
@@ -129,6 +135,10 @@ $(KFX_C_OBJECTS): obj/%.o: src/%.c src/ver_defs.h | obj $(DEPS_EXTRACTED)
 $(KFX_CXX_OBJECTS): obj/%.o: src/%.cpp src/ver_defs.h | obj $(DEPS_EXTRACTED)
 	$(MKDIR) $(dir $@)
 	$(CXX) $(KFX_CXXFLAGS) -c $< -o $@
+
+$(KFX_OBJC_OBJECTS): obj/%.o: src/%.m src/ver_defs.h | obj $(DEPS_EXTRACTED)
+	$(MKDIR) $(dir $@)
+	$(CC) $(KFX_CFLAGS) -c $< -o $@
 
 $(TOML_OBJECTS): obj/centitoml/%.o: deps/centitoml/%.c | obj/centitoml $(DEPS_EXTRACTED)
 	$(CC) $(TOML_CFLAGS) -c $< -o $@
