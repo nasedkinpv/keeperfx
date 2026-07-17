@@ -403,14 +403,16 @@ long net_speed_index_active;
 enum {
     STATUS_PANEL_BASE_WIDTH = 140,
     STATUS_PANEL_BASE_HEIGHT = 400,
-    STATUS_PANEL_BOTTOM_HEIGHT = 140,
+    STATUS_PANEL_BOTTOM_HEIGHT = 96,
+    STATUS_PANEL_MINIMAP_HEIGHT = 140,
     STATUS_PANEL_CONTENT_TOP = 188,
-    STATUS_PANEL_CONTENT_SPLIT = 280,
+    STATUS_PANEL_CONTENT_MIDDLE = 270,
+    STATUS_PANEL_CONTENT_BOTTOM = 346,
 };
 
 TbBool status_panel_is_horizontal(void)
 {
-    return (MyScreenWidth >= 640) && (MyScreenWidth * 10 <= MyScreenHeight * 11);
+    return (MyScreenWidth >= 720) && (MyScreenWidth * 10 <= MyScreenHeight * 11);
 }
 
 int status_panel_units_per_pixel(void)
@@ -429,21 +431,28 @@ static TbBool is_status_panel_menu(const struct GuiMenu *gmnu)
 void status_panel_map_position(long source_x, long source_y, long *screen_x, long *screen_y)
 {
     const long panel_top = MyScreenHeight - STATUS_PANEL_BOTTOM_HEIGHT;
-    if (source_y < STATUS_PANEL_CONTENT_SPLIT)
+    const long content_left = MyScreenWidth - 3 * STATUS_PANEL_BASE_WIDTH;
+    if (source_y < STATUS_PANEL_CONTENT_MIDDLE)
     {
-        *screen_x = MyScreenWidth * 5 / 12 + source_x;
+        *screen_x = content_left + source_x;
         *screen_y = panel_top + max(0L, source_y - STATUS_PANEL_CONTENT_TOP);
+    }
+    else if (source_y < STATUS_PANEL_CONTENT_BOTTOM)
+    {
+        *screen_x = content_left + STATUS_PANEL_BASE_WIDTH + source_x;
+        *screen_y = panel_top + source_y - STATUS_PANEL_CONTENT_MIDDLE;
     }
     else
     {
-        *screen_x = MyScreenWidth * 3 / 4 + source_x;
-        *screen_y = panel_top + source_y - STATUS_PANEL_CONTENT_SPLIT;
+        *screen_x = content_left + 2 * STATUS_PANEL_BASE_WIDTH + source_x;
+        *screen_y = panel_top + source_y - STATUS_PANEL_CONTENT_BOTTOM;
     }
 }
 
 static void layout_horizontal_status_button(struct GuiButton *gbtn, const struct GuiButtonInit *gbinit, const struct GuiMenu *gmnu)
 {
     const long panel_top = gmnu->pos_y;
+    const long minimap_top = MyScreenHeight - STATUS_PANEL_MINIMAP_HEIGHT;
     if (gmnu->ident != GMnu_MAIN)
     {
         long screen_x;
@@ -476,8 +485,8 @@ static void layout_horizontal_status_button(struct GuiButton *gbtn, const struct
     {
         gbtn->pos_x = gbinit->pos_x;
         gbtn->scr_pos_x = gbinit->scr_pos_x;
-        gbtn->pos_y = panel_top + gbinit->pos_y;
-        gbtn->scr_pos_y = panel_top + gbinit->scr_pos_y;
+        gbtn->pos_y = minimap_top + gbinit->pos_y;
+        gbtn->scr_pos_y = minimap_top + gbinit->scr_pos_y;
     }
 }
 long net_number_of_players;
@@ -2286,7 +2295,7 @@ MenuNumber create_menu(struct GuiMenu *gmnu)
         status_panel_height = horizontal_status_panel ? amnu->height : 0;
         struct PlayerInfo *player = get_my_player();
         player->minimap_pos_x = 11;
-        player->minimap_pos_y = horizontal_status_panel ? amnu->pos_y + 11 : 11;
+        player->minimap_pos_y = horizontal_status_panel ? MyScreenHeight - STATUS_PANEL_MINIMAP_HEIGHT + 11 : 11;
         if (horizontal_status_panel)
             SYNCLOG("Using bottom status panel at %dx%d", MyScreenWidth, MyScreenHeight);
     }

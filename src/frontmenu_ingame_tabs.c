@@ -2695,14 +2695,14 @@ void draw_whole_status_panel(void)
             mm_units_per_px = 1;
         fs_units_per_px = status_panel_is_horizontal() ? 16 : (gmnu->height * 16 + 8) / LbTiledSpriteHeight(&status_panel);
         player->minimap_pos_x = 11;
-        player->minimap_pos_y = status_panel_is_horizontal() ? gmnu->pos_y + 11 : 11;
+        player->minimap_pos_y = status_panel_is_horizontal() ? MyScreenHeight - 140 + 11 : 11;
     }
     lbDisplay.DrawColour = colours[15][15][15];
     lbDisplay.DrawFlags = 0;
     if (status_panel_is_horizontal())
     {
-        LbDrawBox(0, gmnu->pos_y, gmnu->width, gmnu->height, colours[0][0][0]);
-        LbTiledSpriteDraw(0, gmnu->pos_y, fs_units_per_px, &status_panel);
+        LbDrawBox(140, gmnu->pos_y, gmnu->width - 140, gmnu->height, colours[0][0][0]);
+        LbTiledSpriteDraw(0, MyScreenHeight - 140, fs_units_per_px, &status_panel);
     }
     else
     {
@@ -2710,7 +2710,7 @@ void draw_whole_status_panel(void)
     }
     // Draws gold amount; note that button_sprite[] is used instead of full font
     if (status_panel_is_horizontal())
-        draw_gold_total(player->id_number, 220, gmnu->pos_y + 72, fs_units_per_px, dungeon->total_money_owned);
+        draw_gold_total(player->id_number, 220, gmnu->pos_y + 62, fs_units_per_px, dungeon->total_money_owned);
     else
         draw_gold_total(player->id_number, gmnu->pos_x + gmnu->width/2, gmnu->pos_y + gmnu->height*67/200, fs_units_per_px, dungeon->total_money_owned);
     if (16/mm_units_per_px < 3)

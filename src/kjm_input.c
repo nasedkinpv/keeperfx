@@ -736,7 +736,7 @@ TbBool mouse_is_over_side_panel_bottom()
         return false;
     struct GuiMenu* gmnu = get_active_menu(menu_id_to_number(GMnu_MAIN));
     if (status_panel_is_horizontal())
-        return GetMouseY() >= gmnu->pos_y;
+        return (GetMouseY() >= gmnu->pos_y) || ((GetMouseX() < 140) && (GetMouseY() >= MyScreenHeight - 140));
     return ((GetMouseX() < status_panel_width) && (GetMouseY() > scale_ui_value(185)) && (GetMouseY() < gmnu->height));
 }
 
