@@ -199,12 +199,14 @@ void setup_engine_window(long x, long y, long width, long height)
 {
     SYNCDBG(6,"Starting for size (%ld,%ld) at (%ld,%ld)",width,height,x,y);
     struct PlayerInfo* player = get_my_player();
+    long screen_height = MyScreenHeight;
     if ((game.operation_flags & GOF_ShowGui) != 0)
     {
       if (x > MyScreenWidth)
         x = MyScreenWidth;
       if (x < status_panel_width)
         x = status_panel_width;
+      screen_height -= status_panel_height;
     } else
     {
       if (x > MyScreenWidth)
@@ -212,16 +214,16 @@ void setup_engine_window(long x, long y, long width, long height)
       if (x < 0)
         x = 0;
     }
-    if (y > MyScreenHeight)
-      y = MyScreenHeight;
+    if (y > screen_height)
+      y = screen_height;
     if (y < 0)
       y = 0;
     if (x+width > MyScreenWidth)
       width = MyScreenWidth-x;
     if (width < 0)
       width = 0;
-    if (y+height > MyScreenHeight)
-      height = MyScreenHeight-y;
+    if (y+height > screen_height)
+      height = screen_height-y;
     if (height < 0)
       height = 0;
     player->engine_window_x = x;
@@ -519,7 +521,7 @@ void draw_overlay_compass(long base_x, long base_y)
     LbTextSetFont(winfont);
     lbDisplay.DrawFlags |= Lb_SPRITE_TRANSPAR4;
     LbTextSetWindow(0, 0, MyScreenWidth, MyScreenHeight);
-    int units_per_px = (16 * status_panel_width + 140 / 2) / 140;
+    int units_per_px = status_panel_units_per_pixel();
     int tx_units_per_px = (22 * units_per_px) / LbTextLineHeight();
     int w = (LbSprFontCharWidth(lbFontPtr, '/') * tx_units_per_px / 16) / 2;
     int h = (LbSprFontCharHeight(lbFontPtr, '/') * tx_units_per_px / 16) / 2 + 2 * units_per_px / 16;

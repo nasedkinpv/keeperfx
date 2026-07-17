@@ -385,6 +385,7 @@ long num_chars_in_font = 128;
 #endif
 
 int status_panel_width = 140;
+int status_panel_height = 0;
 // struct MsgBoxInfo MsgBox;
 
 char info_tag;
@@ -398,6 +399,87 @@ long net_service_scroll_offset;
 long net_number_of_services;
 long net_comport_index_active;
 long net_speed_index_active;
+
+enum {
+    STATUS_PANEL_BASE_WIDTH = 140,
+    STATUS_PANEL_BASE_HEIGHT = 400,
+    STATUS_PANEL_BOTTOM_HEIGHT = 140,
+    STATUS_PANEL_CONTENT_TOP = 188,
+    STATUS_PANEL_CONTENT_SPLIT = 280,
+};
+
+TbBool status_panel_is_horizontal(void)
+{
+    return (MyScreenWidth >= 640) && (MyScreenWidth * 10 <= MyScreenHeight * 11);
+}
+
+int status_panel_units_per_pixel(void)
+{
+    if (status_panel_is_horizontal())
+        return 16;
+    return max(1, (16 * status_panel_width + STATUS_PANEL_BASE_WIDTH / 2) / STATUS_PANEL_BASE_WIDTH);
+}
+
+static TbBool is_status_panel_menu(const struct GuiMenu *gmnu)
+{
+    return (gmnu->pos_x == 0) && (gmnu->pos_y == 0)
+        && (gmnu->width == STATUS_PANEL_BASE_WIDTH) && (gmnu->height == STATUS_PANEL_BASE_HEIGHT);
+}
+
+void status_panel_map_position(long source_x, long source_y, long *screen_x, long *screen_y)
+{
+    const long panel_top = MyScreenHeight - STATUS_PANEL_BOTTOM_HEIGHT;
+    if (source_y < STATUS_PANEL_CONTENT_SPLIT)
+    {
+        *screen_x = MyScreenWidth * 5 / 12 + source_x;
+        *screen_y = panel_top + max(0L, source_y - STATUS_PANEL_CONTENT_TOP);
+    }
+    else
+    {
+        *screen_x = MyScreenWidth * 3 / 4 + source_x;
+        *screen_y = panel_top + source_y - STATUS_PANEL_CONTENT_SPLIT;
+    }
+}
+
+static void layout_horizontal_status_button(struct GuiButton *gbtn, const struct GuiButtonInit *gbinit, const struct GuiMenu *gmnu)
+{
+    const long panel_top = gmnu->pos_y;
+    if (gmnu->ident != GMnu_MAIN)
+    {
+        long screen_x;
+        long screen_y;
+        status_panel_map_position(gbinit->pos_x, gbinit->pos_y, &screen_x, &screen_y);
+        gbtn->pos_x = screen_x;
+        gbtn->pos_y = screen_y;
+        status_panel_map_position(gbinit->scr_pos_x, gbinit->scr_pos_y, &screen_x, &screen_y);
+        gbtn->scr_pos_x = screen_x;
+        gbtn->scr_pos_y = screen_y;
+        return;
+    }
+
+    if ((gbinit->scr_pos_x == 138) && (gbinit->width == 24))
+    {
+        const long event_x = MyScreenWidth - 24 - (gbinit->scr_pos_y / 30) * 24;
+        gbtn->pos_x = event_x;
+        gbtn->scr_pos_x = event_x;
+        gbtn->pos_y = panel_top - 30;
+        gbtn->scr_pos_y = panel_top - 30;
+    }
+    else if (gbinit->scr_pos_y >= 150)
+    {
+        gbtn->pos_x = 150 + gbinit->pos_x;
+        gbtn->scr_pos_x = 150 + gbinit->scr_pos_x;
+        gbtn->pos_y = panel_top + gbinit->pos_y - 150;
+        gbtn->scr_pos_y = panel_top + gbinit->scr_pos_y - 150;
+    }
+    else
+    {
+        gbtn->pos_x = gbinit->pos_x;
+        gbtn->scr_pos_x = gbinit->scr_pos_x;
+        gbtn->pos_y = panel_top + gbinit->pos_y;
+        gbtn->scr_pos_y = panel_top + gbinit->scr_pos_y;
+    }
+}
 long net_number_of_players;
 long net_number_of_enum_players;
 long net_level_hilighted;
@@ -1998,6 +2080,8 @@ int create_button(struct GuiMenu *gmnu, struct GuiButtonInit *gbinit, int units_
         gbtn->pos_y = (gbinit->pos_y * units_per_px + 8) / 16 + gmnu->pos_y;
         gbtn->scr_pos_y = gmnu->pos_y + (gbinit->scr_pos_y * units_per_px + 8) / 16;
     }
+    if (status_panel_is_horizontal() && is_status_panel_menu(gmnu->menu_init))
+        layout_horizontal_status_button(gbtn, gbinit, gmnu);
     if (gbtn->gbtype == LbBtnT_RadioBtn)
     {
         struct TextScrollWindow *scrollwnd;
@@ -2094,7 +2178,7 @@ long compute_menu_position_y(long desired_pos,int menu_height, int units_per_px)
         pos = (MyScreenHeight >> 1) - (scaled_height >> 1);
         break;
     case POS_SCRBTM:
-        pos = MyScreenHeight - scaled_height;
+        pos = MyScreenHeight - (((game.operation_flags & GOF_ShowGui) != 0) ? status_panel_height : 0) - scaled_height;
         break;
     default: // Desired position have direct coordinates
         pos = ((desired_pos*((long)units_per_pixel))>>4)*((long)pixel_size);
@@ -2148,24 +2232,34 @@ MenuNumber create_menu(struct GuiMenu *gmnu)
     }
     // Make scale factor
     int units_per_px;
-    units_per_px = min((int)units_per_pixel,units_per_pixel_min*16/10);
-    // Decrease scale factor if for some reason resulting size would exceed screen (wierd aspec ratio support)
-    if (gmnu->width * units_per_px > LbScreenWidth() * 16)
-        units_per_px = LbScreenWidth() * 16 / gmnu->width;
-    if (gmnu->height * units_per_px > LbScreenHeight() * 16)
-        units_per_px = LbScreenHeight() * 16 / gmnu->height;
-    // Setting position X
-    amnu->pos_x = compute_menu_position_x(gmnu->pos_x,gmnu->width,units_per_px);
-    // Setting position Y
-    amnu->pos_y = compute_menu_position_y(gmnu->pos_y,gmnu->height,units_per_px);
+    const TbBool horizontal_status_panel = status_panel_is_horizontal() && is_status_panel_menu(gmnu);
+    if (horizontal_status_panel)
+    {
+        units_per_px = 16;
+        amnu->pos_x = 0;
+        amnu->pos_y = MyScreenHeight - STATUS_PANEL_BOTTOM_HEIGHT;
+    }
+    else
+    {
+        units_per_px = min((int)units_per_pixel,units_per_pixel_min*16/10);
+        // Decrease scale factor if for some reason resulting size would exceed screen (wierd aspec ratio support)
+        if (gmnu->width * units_per_px > LbScreenWidth() * 16)
+            units_per_px = LbScreenWidth() * 16 / gmnu->width;
+        if (gmnu->height * units_per_px > LbScreenHeight() * 16)
+            units_per_px = LbScreenHeight() * 16 / gmnu->height;
+        // Setting position X
+        amnu->pos_x = compute_menu_position_x(gmnu->pos_x,gmnu->width,units_per_px);
+        // Setting position Y
+        amnu->pos_y = compute_menu_position_y(gmnu->pos_y,gmnu->height,units_per_px);
+    }
 
     amnu->fade_time = gmnu->fade_time;
     if (amnu->fade_time < 1) {
         ERRORLOG("Fade time %d is less than 1.",(int)amnu->fade_time);
     }
     amnu->buttons = gmnu->buttons;
-    amnu->width = (gmnu->width * units_per_px + 8) / 16;
-    amnu->height = (gmnu->height * units_per_px + 8) / 16;
+    amnu->width = horizontal_status_panel ? MyScreenWidth : (gmnu->width * units_per_px + 8) / 16;
+    amnu->height = horizontal_status_panel ? STATUS_PANEL_BOTTOM_HEIGHT : (gmnu->height * units_per_px + 8) / 16;
     amnu->draw_cb = gmnu->draw_cb;
     amnu->create_cb = gmnu->create_cb;
     amnu->is_monopoly_menu = gmnu->is_monopoly_menu;
@@ -2186,6 +2280,16 @@ MenuNumber create_menu(struct GuiMenu *gmnu)
     update_radio_button_data(amnu);
     init_slider_bars(amnu);
     init_menu_buttons(amnu);
+    if (amnu->ident == GMnu_MAIN)
+    {
+        status_panel_width = horizontal_status_panel ? 0 : amnu->width;
+        status_panel_height = horizontal_status_panel ? amnu->height : 0;
+        struct PlayerInfo *player = get_my_player();
+        player->minimap_pos_x = 11;
+        player->minimap_pos_y = horizontal_status_panel ? amnu->pos_y + 11 : 11;
+        if (horizontal_status_panel)
+            SYNCLOG("Using bottom status panel at %dx%d", MyScreenWidth, MyScreenHeight);
+    }
     SYNCDBG(18,"Created menu ID %d at slot %d, pos (%d,%d) size (%d,%d)",(int)gmnu->ident,
         (int)mnu_num,(int)amnu->pos_x,(int)amnu->pos_y,(int)amnu->width,(int)amnu->height);
     return mnu_num;
@@ -2222,7 +2326,16 @@ unsigned long toggle_status_menu(short visible)
   long k = menu_id_to_number(GMnu_MAIN);
   if (k < 0) return 0;
   // Update pannel width
-  status_panel_width = get_active_menu(k)->width;
+  if (status_panel_is_horizontal())
+  {
+      status_panel_width = 0;
+      status_panel_height = get_active_menu(k)->height;
+  }
+  else
+  {
+      status_panel_width = get_active_menu(k)->width;
+      status_panel_height = 0;
+  }
   unsigned long i = get_active_menu(k)->is_turned_on;
   if (visible != i)
   {

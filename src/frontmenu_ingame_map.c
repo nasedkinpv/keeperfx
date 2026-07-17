@@ -140,7 +140,7 @@ void draw_call_to_arms_circle(unsigned char owner, long x1, long y1, long x2, lo
     struct Dungeon *dungeon;
     dungeon = get_players_num_dungeon(owner);
     int units_per_px;
-    units_per_px = (16*status_panel_width + 140/2) / 140;
+    units_per_px = status_panel_units_per_pixel();
     TbPixel col;
     col = player_room_colours[get_player_color_idx(owner)];
     int i;

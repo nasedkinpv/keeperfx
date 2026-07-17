@@ -1881,7 +1881,7 @@ void centre_engine_window(void)
       window_center_x = (MyScreenWidth-player->engine_window_width-status_panel_width) / 2 + status_panel_width;
     else
       window_center_x = (MyScreenWidth-player->engine_window_width) / 2;
-    window_center_y = (MyScreenHeight-player->engine_window_height) / 2;
+    window_center_y = (MyScreenHeight-status_panel_height-player->engine_window_height) / 2;
     setup_engine_window(window_center_x, window_center_y, player->engine_window_width, player->engine_window_height);
 }
 

@@ -1498,25 +1498,42 @@ void draw_name_box(long x, long y, int width, struct Thing *thing)
 void gui_creature_query_background1(struct GuiMenu *gmnu)
 {
     SYNCDBG(19,"Starting");
-    int units_per_px = (gmnu->width * 16 + 140 / 2) / 140;
+    int units_per_px = status_panel_units_per_pixel();
     struct PlayerInfo* player = get_my_player();
     struct Thing* ctrltng = thing_get(player->controlled_thing_idx);
-    draw_name_box(gmnu->pos_x + 4*units_per_px/16, gmnu->pos_y + 262*units_per_px/16, gmnu->width, ctrltng);
-    int portrt_x = gmnu->pos_x + (4 * units_per_px + 8) / 16;
-    int portrt_y = gmnu->pos_y + (188 * units_per_px + 8) / 16;
+    long name_x;
+    long name_y;
+    long portrt_x;
+    long portrt_y;
+    int panel_width;
+    if (status_panel_is_horizontal())
+    {
+        status_panel_map_position(4, 262, &name_x, &name_y);
+        status_panel_map_position(4, 188, &portrt_x, &portrt_y);
+        panel_width = 140;
+    }
+    else
+    {
+        name_x = gmnu->pos_x + 4 * units_per_px / 16;
+        name_y = gmnu->pos_y + 262 * units_per_px / 16;
+        portrt_x = gmnu->pos_x + (4 * units_per_px + 8) / 16;
+        portrt_y = gmnu->pos_y + (188 * units_per_px + 8) / 16;
+        panel_width = gmnu->width;
+    }
+    draw_name_box(name_x, name_y, panel_width, ctrltng);
     if (thing_is_creature(ctrltng) && (ctrltng->ccontrol_idx > 0))
     {
         long spr_idx = get_creature_model_graphics(ctrltng->model, CGI_QuerySymbol);
         if (spr_idx > 0)
         {
             const struct TbSprite* spr = get_button_sprite_for_player(spr_idx, ctrltng->owner);
-            int bs_units_per_px = (gmnu->width * 35 / 100) * 16 / spr->SWidth;
+            int bs_units_per_px = (panel_width * 35 / 100) * 16 / spr->SWidth;
             LbSpriteDrawResized(portrt_x + 12 * units_per_px / 16, portrt_y + 12 * units_per_px / 16, bs_units_per_px, spr);
         }
     }
     {
         const struct TbSprite* spr = get_panel_sprite(GPS_rpanel_frame_double_hex_med);
-        int ps_units_per_px = (gmnu->width * 52 / 100) * 16 / spr->SWidth;
+        int ps_units_per_px = (panel_width * 52 / 100) * 16 / spr->SWidth;
         draw_gui_panel_sprite_left(portrt_x, portrt_y, ps_units_per_px, GPS_rpanel_frame_double_hex_med);
     }
 }
@@ -1524,19 +1541,31 @@ void gui_creature_query_background1(struct GuiMenu *gmnu)
 void gui_creature_query_background2(struct GuiMenu *gmnu)
 {
     SYNCDBG(19,"Starting");
-    int units_per_px = (gmnu->width * 16 + 140 / 2) / 140;
+    int units_per_px = status_panel_units_per_pixel();
     struct PlayerInfo* player = get_my_player();
     struct Thing* ctrltng = thing_get(player->controlled_thing_idx);
-    int nambox_x = gmnu->pos_x + 4 * units_per_px / 16;
-    int nambox_y = gmnu->pos_y + 200 * units_per_px / 16;
-    draw_name_box(nambox_x, nambox_y, gmnu->width, ctrltng);
+    long nambox_x;
+    long nambox_y;
+    int panel_width;
+    if (status_panel_is_horizontal())
+    {
+        status_panel_map_position(4, 200, &nambox_x, &nambox_y);
+        panel_width = 140;
+    }
+    else
+    {
+        nambox_x = gmnu->pos_x + 4 * units_per_px / 16;
+        nambox_y = gmnu->pos_y + 200 * units_per_px / 16;
+        panel_width = gmnu->width;
+    }
+    draw_name_box(nambox_x, nambox_y, panel_width, ctrltng);
     if (thing_is_creature(ctrltng) && (ctrltng->ccontrol_idx > 0))
     {
         long spr_idx = get_creature_model_graphics(ctrltng->model, CGI_HandSymbol);
         if (spr_idx > 0)
         {
             const struct TbSprite* spr = get_panel_sprite(spr_idx);
-            int ps_units_per_px = (gmnu->width * 22 / 100) * 16 / spr->SWidth;
+            int ps_units_per_px = (panel_width * 22 / 100) * 16 / spr->SWidth;
             draw_gui_panel_sprite_left_player(nambox_x, nambox_y - 22*units_per_px/16, ps_units_per_px, spr_idx,ctrltng->owner);
         }
     }
@@ -2029,7 +2058,17 @@ void gui_activity_background(struct GuiMenu *gmnu)
         }
     }
     lbDisplay.DrawFlags |= Lb_SPRITE_TRANSPAR4;
-    LbDrawBox(gmnu->pos_x + scale_ui_value(2),gmnu->pos_y + scale_ui_value(218),scale_ui_value(134),scale_ui_value(24),colours[0][0][0]);
+    if (status_panel_is_horizontal())
+    {
+        long box_x;
+        long box_y;
+        status_panel_map_position(2, 218, &box_x, &box_y);
+        LbDrawBox(box_x, box_y, 134, 24, colours[0][0][0]);
+    }
+    else
+    {
+        LbDrawBox(gmnu->pos_x + scale_ui_value(2),gmnu->pos_y + scale_ui_value(218),scale_ui_value(134),scale_ui_value(24),colours[0][0][0]);
+    }
 
     lbDisplay.DrawFlags = flg_mem;
 }
@@ -2311,6 +2350,18 @@ void maintain_player_page2(struct GuiButton *gbtn)
 void maintain_query_button(struct GuiButton *gbtn)
 {
     unsigned char current_players_count = count_current_players_count();
+    long source_x = (current_players_count > 4) ? 74 : 44;
+    if (status_panel_is_horizontal())
+    {
+        long screen_x;
+        long screen_y;
+        status_panel_map_position(source_x, 374, &screen_x, &screen_y);
+        gbtn->pos_x = screen_x;
+        gbtn->scr_pos_x = screen_x;
+        gbtn->pos_y = screen_y;
+        gbtn->scr_pos_y = screen_y;
+        return;
+    }
     if(current_players_count > 4)
     {
         gbtn->pos_x = scale_ui_value(74);
@@ -2639,16 +2690,29 @@ void draw_whole_status_panel(void)
     {
         int mnu_num = menu_id_to_number(GMnu_MAIN);
         gmnu = get_active_menu(mnu_num);
-        mm_units_per_px = (gmnu->width * 16 + 140/2) / 140;
+        mm_units_per_px = status_panel_units_per_pixel();
         if (mm_units_per_px < 1)
             mm_units_per_px = 1;
-        fs_units_per_px = (gmnu->height * 16 + 8) / LbTiledSpriteHeight(&status_panel);
+        fs_units_per_px = status_panel_is_horizontal() ? 16 : (gmnu->height * 16 + 8) / LbTiledSpriteHeight(&status_panel);
+        player->minimap_pos_x = 11;
+        player->minimap_pos_y = status_panel_is_horizontal() ? gmnu->pos_y + 11 : 11;
     }
     lbDisplay.DrawColour = colours[15][15][15];
     lbDisplay.DrawFlags = 0;
-    LbTiledSpriteDraw(0, 0, fs_units_per_px, &status_panel);
+    if (status_panel_is_horizontal())
+    {
+        LbDrawBox(0, gmnu->pos_y, gmnu->width, gmnu->height, colours[0][0][0]);
+        LbTiledSpriteDraw(0, gmnu->pos_y, fs_units_per_px, &status_panel);
+    }
+    else
+    {
+        LbTiledSpriteDraw(0, 0, fs_units_per_px, &status_panel);
+    }
     // Draws gold amount; note that button_sprite[] is used instead of full font
-    draw_gold_total(player->id_number, gmnu->pos_x + gmnu->width/2, gmnu->pos_y + gmnu->height*67/200, fs_units_per_px, dungeon->total_money_owned);
+    if (status_panel_is_horizontal())
+        draw_gold_total(player->id_number, 220, gmnu->pos_y + 72, fs_units_per_px, dungeon->total_money_owned);
+    else
+        draw_gold_total(player->id_number, gmnu->pos_x + gmnu->width/2, gmnu->pos_y + gmnu->height*67/200, fs_units_per_px, dungeon->total_money_owned);
     if (16/mm_units_per_px < 3)
         mmzoom = (player->minimap_zoom) / scale_value_for_resolution_with_upp(2,mm_units_per_px);
     else
@@ -2657,7 +2721,7 @@ void draw_whole_status_panel(void)
     long basic_zoom = player->minimap_zoom;
     panel_map_draw_overlay_things(mm_units_per_px, mmzoom, basic_zoom);
     unsigned char placefill_threshold = (LbScreenHeight() >= 400) ? 80 : 40;
-    if (LbScreenHeight() - gmnu->height >= placefill_threshold)
+    if (!status_panel_is_horizontal() && (LbScreenHeight() - gmnu->height >= placefill_threshold))
     {
         draw_placefiller(0, gmnu->pos_y + gmnu->height, fs_units_per_px);
     }

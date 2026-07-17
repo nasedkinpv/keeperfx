@@ -720,7 +720,7 @@ TbBool mouse_is_over_panel_map(ScreenCoord x, ScreenCoord y)
 {
     long cmx = GetMouseX();
     long cmy = GetMouseY();
-    int units_per_px = (16 * status_panel_width + 140 / 2) / 140;
+    int units_per_px = status_panel_units_per_pixel();
     long px = (cmx - (x + PANEL_MAP_RADIUS * units_per_px / 16));
     long py = (cmy - (y + PANEL_MAP_RADIUS * units_per_px / 16));
     return (LbSqrL(px*px + py*py) < PANEL_MAP_RADIUS*units_per_px/16);
@@ -735,6 +735,8 @@ TbBool mouse_is_over_side_panel_bottom()
     if (!flag_is_set(game.operation_flags, GOF_ShowGui))
         return false;
     struct GuiMenu* gmnu = get_active_menu(menu_id_to_number(GMnu_MAIN));
+    if (status_panel_is_horizontal())
+        return GetMouseY() >= gmnu->pos_y;
     return ((GetMouseX() < status_panel_width) && (GetMouseY() > scale_ui_value(185)) && (GetMouseY() < gmnu->height));
 }
 
