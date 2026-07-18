@@ -528,8 +528,11 @@ void draw_tooltip_slab64k(char *tttext, long pos_x, long pos_y, long ttwidth, lo
           y = scale_ui_value(4);
         if (x + scale_ui_value(viswidth) >= MyScreenWidth)
           x = MyScreenWidth - scale_ui_value(viswidth);
-        if (y + scale_ui_value(ttheight) >= MyScreenHeight)
-          y = MyScreenHeight - scale_ui_value(ttheight);
+        long bottom = MyScreenHeight;
+        if (status_panel_is_horizontal() && ((game.operation_flags & GOF_ShowGui) != 0))
+          bottom = status_panel_horizontal_top() - scale_ui_value(4);
+        if (y + scale_ui_value(ttheight) >= bottom)
+          y = bottom - scale_ui_value(ttheight);
         if (tttext[0] != '\0')
         {
             draw_slab64k(x, y, units_per_pixel_ui, scale_ui_value_lofi(viswidth), scale_ui_value_lofi(ttheight));

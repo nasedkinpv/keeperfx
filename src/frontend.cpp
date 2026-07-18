@@ -490,12 +490,12 @@ static void layout_creature_status_button(struct GuiButton *gbtn, const struct G
     const long action_left = content_left + STATUS_PANEL_BASE_WIDTH;
     if ((gbinit->width == 22) && (gbinit->height == 24))
     {
-        place_status_button_visible(gbtn, gbinit, content_left, panel_top + ((gbinit->pos_y < 300) ? 4 : 52));
+        place_status_button_visible(gbtn, gbinit, content_left + 1, panel_top + ((gbinit->pos_y < 300) ? 4 : 52));
     }
     else if ((gbinit->width == 38) && (gbinit->height == 24))
     {
         const int index = (gbinit->pos_x - 26) / 36;
-        place_status_button_visible(gbtn, gbinit, content_left + 22 + index * 38, panel_top + 4);
+        place_status_button_visible(gbtn, gbinit, content_left + 24 + index * 38, panel_top + 28);
     }
     else if ((gbinit->width == 22) && (gbinit->height == 22))
     {
@@ -537,7 +537,8 @@ static void layout_query_status_button(struct GuiButton *gbtn, const struct GuiB
     }
     else if ((gbinit->width == 52) && (gbinit->height == 20))
     {
-        place_status_button_visible(gbtn, gbinit, action_left + 210, panel_top + 56);
+        const long button_x = (gbinit->pos_x < 30) ? action_left + 84 : action_left + 114;
+        place_status_button_visible(gbtn, gbinit, button_x, panel_top + 56);
     }
 }
 
@@ -547,7 +548,7 @@ static void layout_creature_query_status_button(struct GuiButton *gbtn, const st
     const TbBool portrait_page = (menu_id == GMnu_CREATURE_QUERY1) || (menu_id == GMnu_CREATURE_QUERY2);
     if ((gbinit->width == 52) && (gbinit->height == 20))
     {
-        place_status_button_visible(gbtn, gbinit, action_left + 210, panel_top + 56);
+        place_status_button_visible(gbtn, gbinit, action_left + 114, panel_top + 56);
     }
     else if ((gbinit->width == 60) && (gbinit->height == 24))
     {
@@ -589,11 +590,13 @@ static void layout_horizontal_status_button(struct GuiButton *gbtn, const struct
 
     if ((gbinit->scr_pos_x == 138) && (gbinit->width == 24))
     {
-        const long event_x = MyScreenWidth - 24 - (gbinit->scr_pos_y / 30) * 24;
+        const long event_index = (360 - gbinit->scr_pos_y) / 30;
+        const long event_x = 2;
+        const long event_y = minimap_top - 30 - event_index * 30;
         gbtn->pos_x = event_x;
         gbtn->scr_pos_x = event_x;
-        gbtn->pos_y = panel_top - 30;
-        gbtn->scr_pos_y = panel_top - 30;
+        gbtn->pos_y = event_y;
+        gbtn->scr_pos_y = event_y;
     }
     else if (gbinit->scr_pos_y >= 150)
     {

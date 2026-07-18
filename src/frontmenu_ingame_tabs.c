@@ -2352,7 +2352,8 @@ void maintain_query_button(struct GuiButton *gbtn)
     unsigned char current_players_count = count_current_players_count();
     if (status_panel_is_horizontal())
     {
-        gbtn->pos_x = status_panel_context_left() + 350;
+        const long action_left = status_panel_context_left() + 140;
+        gbtn->pos_x = action_left + ((current_players_count > 4) ? 144 : 114);
         gbtn->scr_pos_x = gbtn->pos_x;
         gbtn->pos_y = status_panel_horizontal_top() + 56;
         gbtn->scr_pos_y = gbtn->pos_y;
