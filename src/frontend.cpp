@@ -403,11 +403,9 @@ long net_speed_index_active;
 enum {
     STATUS_PANEL_BASE_WIDTH = 140,
     STATUS_PANEL_BASE_HEIGHT = 400,
-    STATUS_PANEL_BOTTOM_HEIGHT = 96,
+    STATUS_PANEL_BOTTOM_HEIGHT = 80,
     STATUS_PANEL_MINIMAP_HEIGHT = 140,
-    STATUS_PANEL_CONTENT_TOP = 188,
-    STATUS_PANEL_CONTENT_MIDDLE = 270,
-    STATUS_PANEL_CONTENT_BOTTOM = 346,
+    STATUS_PANEL_CONTENT_WIDTH = 420,
 };
 
 TbBool status_panel_is_horizontal(void)
@@ -428,24 +426,145 @@ static TbBool is_status_panel_menu(const struct GuiMenu *gmnu)
         && (gmnu->width == STATUS_PANEL_BASE_WIDTH) && (gmnu->height == STATUS_PANEL_BASE_HEIGHT);
 }
 
-void status_panel_map_position(long source_x, long source_y, long *screen_x, long *screen_y)
+int status_panel_context_left(void)
 {
-    const long panel_top = MyScreenHeight - STATUS_PANEL_BOTTOM_HEIGHT;
-    const long content_left = MyScreenWidth - 3 * STATUS_PANEL_BASE_WIDTH;
-    if (source_y < STATUS_PANEL_CONTENT_MIDDLE)
+    return MyScreenWidth - STATUS_PANEL_CONTENT_WIDTH;
+}
+
+int status_panel_horizontal_top(void)
+{
+    return MyScreenHeight - STATUS_PANEL_BOTTOM_HEIGHT;
+}
+
+static void place_status_button_visible(struct GuiButton *gbtn, const struct GuiButtonInit *gbinit, long x, long y)
+{
+    gbtn->scr_pos_x = x;
+    gbtn->scr_pos_y = y;
+    gbtn->pos_x = x + gbinit->pos_x - gbinit->scr_pos_x;
+    gbtn->pos_y = y + gbinit->pos_y - gbinit->scr_pos_y;
+}
+
+static TbBool is_catalog_status_menu(MenuID menu_id)
+{
+    switch (menu_id)
     {
-        *screen_x = content_left + source_x;
-        *screen_y = panel_top + max(0L, source_y - STATUS_PANEL_CONTENT_TOP);
+    case GMnu_ROOM:
+    case GMnu_ROOM2:
+    case GMnu_SPELL:
+    case GMnu_SPELL2:
+    case GMnu_SPELL_LOST:
+    case GMnu_TRAP:
+    case GMnu_TRAP2:
+        return true;
+    default:
+        return false;
     }
-    else if (source_y < STATUS_PANEL_CONTENT_BOTTOM)
+}
+
+static void layout_catalog_status_button(struct GuiButton *gbtn, const struct GuiButtonInit *gbinit, long panel_top, long content_left)
+{
+    const long action_left = content_left + STATUS_PANEL_BASE_WIDTH;
+    if ((gbinit->width == 32) && (gbinit->height == 36) && (gbinit->pos_y >= 238))
     {
-        *screen_x = content_left + STATUS_PANEL_BASE_WIDTH + source_x;
-        *screen_y = panel_top + source_y - STATUS_PANEL_CONTENT_MIDDLE;
+        const int source_row = (gbinit->pos_y - 238) / 38;
+        const int source_col = (gbinit->pos_x - 2) / 32;
+        const int index = source_row * 4 + source_col;
+        place_status_button_visible(gbtn, gbinit, action_left + 1 + (index % 8) * 35, panel_top + 4 + (index / 8) * 36);
     }
-    else
+    else if ((gbinit->width == 126) && (gbinit->height == 44))
     {
-        *screen_x = content_left + 2 * STATUS_PANEL_BASE_WIDTH + source_x;
-        *screen_y = panel_top + source_y - STATUS_PANEL_CONTENT_BOTTOM;
+        place_status_button_visible(gbtn, gbinit, content_left + 7, panel_top + 4);
+    }
+    else if ((gbinit->width == 52) && (gbinit->height == 20))
+    {
+        place_status_button_visible(gbtn, gbinit, content_left + 44, panel_top + 56);
+    }
+    else if ((gbinit->width == 16) && (gbinit->height == 20))
+    {
+        place_status_button_visible(gbtn, gbinit, content_left + 112, panel_top + 24);
+    }
+}
+
+static void layout_creature_status_button(struct GuiButton *gbtn, const struct GuiButtonInit *gbinit, long panel_top, long content_left)
+{
+    const long action_left = content_left + STATUS_PANEL_BASE_WIDTH;
+    if ((gbinit->width == 22) && (gbinit->height == 24))
+    {
+        place_status_button_visible(gbtn, gbinit, content_left, panel_top + ((gbinit->pos_y < 300) ? 4 : 52));
+    }
+    else if ((gbinit->width == 38) && (gbinit->height == 24))
+    {
+        const int index = (gbinit->pos_x - 26) / 36;
+        place_status_button_visible(gbtn, gbinit, content_left + 22 + index * 38, panel_top + 4);
+    }
+    else if ((gbinit->width == 22) && (gbinit->height == 22))
+    {
+        const int index = (gbinit->scr_pos_y - 218) / 24;
+        place_status_button_visible(gbtn, gbinit, action_left + (index % 2) * 140, panel_top + 4 + (index / 2) * 24);
+    }
+    else if ((gbinit->width == 32) && (gbinit->height == 20))
+    {
+        const int index = (gbinit->pos_y - 220) / 24;
+        place_status_button_visible(gbtn, gbinit, action_left + (index % 2) * 140 + gbinit->pos_x, panel_top + 4 + (index / 2) * 24);
+    }
+}
+
+static void layout_query_status_button(struct GuiButton *gbtn, const struct GuiButtonInit *gbinit, long panel_top, long content_left)
+{
+    const long action_left = content_left + STATUS_PANEL_BASE_WIDTH;
+    if ((gbinit->width == 32) && (gbinit->height == 26))
+    {
+        place_status_button_visible(gbtn, gbinit, content_left + 35 + ((gbinit->pos_x > 50) ? 38 : 0), panel_top + 2);
+    }
+    else if ((gbinit->width == 132) && (gbinit->height == 24))
+    {
+        place_status_button_visible(gbtn, gbinit, content_left + 4, panel_top + 28);
+    }
+    else if ((gbinit->width == 60) && (gbinit->height == 24) && (gbinit->pos_y == 246))
+    {
+        place_status_button_visible(gbtn, gbinit, content_left + ((gbinit->pos_x < 40) ? 7 : 73), panel_top + 52);
+    }
+    else if ((gbinit->width == 60) && (gbinit->height == 24) && (gbinit->pos_y >= 274))
+    {
+        const int player_row = (gbinit->pos_y - 274) / 24;
+        const long group_x = action_left + (player_row % 2) * 140;
+        place_status_button_visible(gbtn, gbinit, group_x + ((gbinit->pos_x < 70) ? 4 : 74), panel_top + 4 + (player_row / 2) * 28);
+    }
+    else if ((gbinit->width == 14) && (gbinit->height == 22))
+    {
+        const int player_row = (gbinit->pos_y - 274) / 24;
+        place_status_button_visible(gbtn, gbinit, action_left + (player_row % 2) * 140 + 62, panel_top + 5 + (player_row / 2) * 28);
+    }
+    else if ((gbinit->width == 52) && (gbinit->height == 20))
+    {
+        place_status_button_visible(gbtn, gbinit, action_left + 210, panel_top + 56);
+    }
+}
+
+static void layout_creature_query_status_button(struct GuiButton *gbtn, const struct GuiButtonInit *gbinit, MenuID menu_id, long panel_top, long content_left)
+{
+    const long action_left = content_left + STATUS_PANEL_BASE_WIDTH;
+    const TbBool portrait_page = (menu_id == GMnu_CREATURE_QUERY1) || (menu_id == GMnu_CREATURE_QUERY2);
+    if ((gbinit->width == 52) && (gbinit->height == 20))
+    {
+        place_status_button_visible(gbtn, gbinit, action_left + 210, panel_top + 56);
+    }
+    else if ((gbinit->width == 60) && (gbinit->height == 24))
+    {
+        const int first_y = portrait_page ? 290 : 226;
+        const int row_step = portrait_page ? 28 : 30;
+        const int source_row = (gbinit->pos_y - first_y) / row_step;
+        const int source_col = (gbinit->pos_x > 40) ? 1 : 0;
+        const int index = source_row * 2 + source_col;
+        place_status_button_visible(gbtn, gbinit, action_left + 14 + (index % 4) * 64, panel_top + 4 + (index / 4) * 24);
+    }
+    else if ((gbinit->width == 56) && (gbinit->height == 24))
+    {
+        place_status_button_visible(gbtn, gbinit, content_left + 80, panel_top + 4 + ((gbinit->pos_y - 200) / 30) * 30);
+    }
+    else if ((gbinit->width == 126) && (gbinit->height == 14))
+    {
+        place_status_button_visible(gbtn, gbinit, content_left + 7, panel_top + (portrait_page ? 60 : 4));
     }
 }
 
@@ -455,14 +574,16 @@ static void layout_horizontal_status_button(struct GuiButton *gbtn, const struct
     const long minimap_top = MyScreenHeight - STATUS_PANEL_MINIMAP_HEIGHT;
     if (gmnu->ident != GMnu_MAIN)
     {
-        long screen_x;
-        long screen_y;
-        status_panel_map_position(gbinit->pos_x, gbinit->pos_y, &screen_x, &screen_y);
-        gbtn->pos_x = screen_x;
-        gbtn->pos_y = screen_y;
-        status_panel_map_position(gbinit->scr_pos_x, gbinit->scr_pos_y, &screen_x, &screen_y);
-        gbtn->scr_pos_x = screen_x;
-        gbtn->scr_pos_y = screen_y;
+        const long content_left = status_panel_context_left();
+        if (is_catalog_status_menu(gmnu->ident))
+            layout_catalog_status_button(gbtn, gbinit, panel_top, content_left);
+        else if (gmnu->ident == GMnu_CREATURE)
+            layout_creature_status_button(gbtn, gbinit, panel_top, content_left);
+        else if (gmnu->ident == GMnu_QUERY)
+            layout_query_status_button(gbtn, gbinit, panel_top, content_left);
+        else if ((gmnu->ident == GMnu_CREATURE_QUERY1) || (gmnu->ident == GMnu_CREATURE_QUERY2)
+            || (gmnu->ident == GMnu_CREATURE_QUERY3) || (gmnu->ident == GMnu_CREATURE_QUERY4))
+            layout_creature_query_status_button(gbtn, gbinit, gmnu->ident, panel_top, content_left);
         return;
     }
 
@@ -2187,7 +2308,7 @@ long compute_menu_position_y(long desired_pos,int menu_height, int units_per_px)
         pos = (MyScreenHeight >> 1) - (scaled_height >> 1);
         break;
     case POS_SCRBTM:
-        pos = MyScreenHeight - (((game.operation_flags & GOF_ShowGui) != 0) ? status_panel_height : 0) - scaled_height;
+        pos = MyScreenHeight - (((game.operation_flags & GOF_ShowGui) != 0) ? status_panel_height + (status_panel_is_horizontal() ? 4 : 0) : 0) - scaled_height;
         break;
     default: // Desired position have direct coordinates
         pos = ((desired_pos*((long)units_per_pixel))>>4)*((long)pixel_size);

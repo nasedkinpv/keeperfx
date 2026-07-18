@@ -315,7 +315,8 @@ extern int status_panel_width;
 extern int status_panel_height;
 TbBool status_panel_is_horizontal(void);
 int status_panel_units_per_pixel(void);
-void status_panel_map_position(long source_x, long source_y, long *screen_x, long *screen_y);
+int status_panel_context_left(void);
+int status_panel_horizontal_top(void);
 extern const unsigned long alliance_grid[4][4];
 
 #if (BFDEBUG_LEVEL > 0)

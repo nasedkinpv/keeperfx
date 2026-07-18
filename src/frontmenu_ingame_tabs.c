@@ -1508,8 +1508,10 @@ void gui_creature_query_background1(struct GuiMenu *gmnu)
     int panel_width;
     if (status_panel_is_horizontal())
     {
-        status_panel_map_position(4, 262, &name_x, &name_y);
-        status_panel_map_position(4, 188, &portrt_x, &portrt_y);
+        name_x = status_panel_context_left() + 4;
+        name_y = status_panel_horizontal_top() + 60;
+        portrt_x = status_panel_context_left() + 4;
+        portrt_y = status_panel_horizontal_top() - 16;
         panel_width = 140;
     }
     else
@@ -1549,7 +1551,8 @@ void gui_creature_query_background2(struct GuiMenu *gmnu)
     int panel_width;
     if (status_panel_is_horizontal())
     {
-        status_panel_map_position(4, 200, &nambox_x, &nambox_y);
+        nambox_x = status_panel_context_left() + 4;
+        nambox_y = status_panel_horizontal_top() + 4;
         panel_width = 140;
     }
     else
@@ -2060,10 +2063,7 @@ void gui_activity_background(struct GuiMenu *gmnu)
     lbDisplay.DrawFlags |= Lb_SPRITE_TRANSPAR4;
     if (status_panel_is_horizontal())
     {
-        long box_x;
-        long box_y;
-        status_panel_map_position(2, 218, &box_x, &box_y);
-        LbDrawBox(box_x, box_y, 134, 24, colours[0][0][0]);
+        LbDrawBox(status_panel_context_left() + 140, status_panel_horizontal_top() + 4, 277, 72, colours[0][0][0]);
     }
     else
     {
@@ -2350,16 +2350,12 @@ void maintain_player_page2(struct GuiButton *gbtn)
 void maintain_query_button(struct GuiButton *gbtn)
 {
     unsigned char current_players_count = count_current_players_count();
-    long source_x = (current_players_count > 4) ? 74 : 44;
     if (status_panel_is_horizontal())
     {
-        long screen_x;
-        long screen_y;
-        status_panel_map_position(source_x, 374, &screen_x, &screen_y);
-        gbtn->pos_x = screen_x;
-        gbtn->scr_pos_x = screen_x;
-        gbtn->pos_y = screen_y;
-        gbtn->scr_pos_y = screen_y;
+        gbtn->pos_x = status_panel_context_left() + 350;
+        gbtn->scr_pos_x = gbtn->pos_x;
+        gbtn->pos_y = status_panel_horizontal_top() + 56;
+        gbtn->scr_pos_y = gbtn->pos_y;
         return;
     }
     if(current_players_count > 4)
@@ -2710,7 +2706,7 @@ void draw_whole_status_panel(void)
     }
     // Draws gold amount; note that button_sprite[] is used instead of full font
     if (status_panel_is_horizontal())
-        draw_gold_total(player->id_number, 220, gmnu->pos_y + 62, fs_units_per_px, dungeon->total_money_owned);
+        draw_gold_total(player->id_number, 220, gmnu->pos_y + 46, fs_units_per_px, dungeon->total_money_owned);
     else
         draw_gold_total(player->id_number, gmnu->pos_x + gmnu->width/2, gmnu->pos_y + gmnu->height*67/200, fs_units_per_px, dungeon->total_money_owned);
     if (16/mm_units_per_px < 3)
