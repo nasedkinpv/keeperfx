@@ -156,8 +156,8 @@ int LbMacOSMetalCreate(SDL_Window *window, int width, int height)
         kfx_metal.window = window;
         kfx_metal.width = width;
         kfx_metal.height = height;
-        kfx_metal.saturation = kfx_metal_preference(@"MetalSaturation", 1.03f, 0.0f, 2.0f);
-        kfx_metal.contrast = kfx_metal_preference(@"MetalContrast", 1.015f, 0.5f, 2.0f);
+        kfx_metal.saturation = kfx_metal_preference(@"MetalSaturation", 1.0f, 0.0f, 2.0f);
+        kfx_metal.contrast = kfx_metal_preference(@"MetalContrast", 1.0f, 0.5f, 2.0f);
         kfx_metal.post_process.sharpness = kfx_metal_preference(@"MetalSharpness", 0.08f, 0.0f, 1.0f);
         kfx_metal.post_process.dither = kfx_metal_preference(@"MetalDither", 0.75f, 0.0f, 2.0f);
         kfx_metal.view = SDL_Metal_CreateView(window);

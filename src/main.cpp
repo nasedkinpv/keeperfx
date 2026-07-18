@@ -1851,7 +1851,7 @@ TbBool set_gamma(char corrlvl, TbBool do_set)
     if (corrlvl > 4)
       corrlvl = 4;
     settings.gamma_correction = corrlvl;
-    fname=prepare_file_fmtpath(FGrp_StdData,"pal%05d.dat",settings.gamma_correction);
+    fname=prepare_file_fmtpath(FGrp_StdData,"pal%05d.dat",0);
     if (!LbFileExists(fname))
     {
       WARNMSG("Palette file \"%s\" doesn't exist.", fname);
@@ -1860,6 +1860,10 @@ TbBool set_gamma(char corrlvl, TbBool do_set)
     if (result)
     {
       result = (LbFileLoadAt(fname, engine_palette) != -1);
+    }
+    if (result)
+    {
+      result = (LbPaletteApplyToneCurve(engine_palette, settings.gamma_correction) == Lb_SUCCESS);
     }
     if ((result) && (do_set))
     {

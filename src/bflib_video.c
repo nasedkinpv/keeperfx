@@ -776,6 +776,35 @@ TbResult LbPaletteSet(unsigned char *palette)
     return ret;
 }
 
+/** Applies a black-point-aware tone curve without shifting hue. */
+TbResult LbPaletteApplyToneCurve(unsigned char *palette, unsigned int level)
+{
+    static const double exponents[] = {1.0, 0.9, 0.8, 0.7, 0.6};
+    const int black_point = 2;
+    if (palette == NULL)
+        return Lb_FAIL;
+    if (level >= sizeof(exponents) / sizeof(exponents[0]))
+        level = sizeof(exponents) / sizeof(exponents[0]) - 1;
+
+    for (int i = 0; i < PALETTE_SIZE; i += 3)
+    {
+        const int peak = max(max(palette[i], palette[i + 1]), palette[i + 2]);
+        if (peak <= black_point)
+        {
+            palette[i] = 0;
+            palette[i + 1] = 0;
+            palette[i + 2] = 0;
+            continue;
+        }
+        const double corrected_peak = 63.0 * pow((double)(peak - black_point) / (63 - black_point), exponents[level]);
+        const double scale = corrected_peak / peak;
+        palette[i] = (unsigned char)lround(palette[i] * scale);
+        palette[i + 1] = (unsigned char)lround(palette[i + 1] * scale);
+        palette[i + 2] = (unsigned char)lround(palette[i + 2] * scale);
+    }
+    return Lb_SUCCESS;
+}
+
 /** Retrieves the 8-bit video palette.
  *
  * @param palette Pointer to target palette colors buffer.
