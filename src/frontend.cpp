@@ -490,21 +490,21 @@ static void layout_creature_status_button(struct GuiButton *gbtn, const struct G
     const long action_left = content_left + STATUS_PANEL_BASE_WIDTH;
     if ((gbinit->width == 22) && (gbinit->height == 24))
     {
-        place_status_button_visible(gbtn, gbinit, content_left + 1, panel_top + ((gbinit->pos_y < 300) ? 4 : 52));
+        place_status_button_visible(gbtn, gbinit, action_left - 24, panel_top + ((gbinit->pos_y < 300) ? 4 : 52));
     }
     else if ((gbinit->width == 38) && (gbinit->height == 24))
     {
         const int index = (gbinit->pos_x - 26) / 36;
-        place_status_button_visible(gbtn, gbinit, content_left + 24 + index * 38, panel_top + 28);
+        place_status_button_visible(gbtn, gbinit, content_left + index * 38, panel_top + 28);
     }
     else if ((gbinit->width == 22) && (gbinit->height == 22))
     {
-        const int index = (gbinit->scr_pos_y - 218) / 24;
-        place_status_button_visible(gbtn, gbinit, action_left + (index % 2) * 140, panel_top + 4 + (index / 2) * 24);
+        const int index = gbinit->btype_value;
+        place_status_button_visible(gbtn, gbinit, action_left + (index % 2) * 140, panel_top - 20 + (index / 2) * 24);
     }
     else if ((gbinit->width == 32) && (gbinit->height == 20))
     {
-        const int index = (gbinit->pos_y - 220) / 24;
+        const int index = gbinit->btype_value;
         place_status_button_visible(gbtn, gbinit, action_left + (index % 2) * 140 + gbinit->pos_x, panel_top + 4 + (index / 2) * 24);
     }
 }
