@@ -23,7 +23,7 @@ Currently the whole codebase of Dungeon Keeper is remade and all code has been r
 
 
 ## Features
-- Windows 7/10/11 support and native Apple Silicon macOS support
+- Windows 7/10/11, native Apple Silicon macOS, and native AArch64 PortMaster support
 - Higher screen resolutions
 - Increased FPS, decoupled gfx and game logic
 - Improved and modernized controls
@@ -49,6 +49,7 @@ or [Steam](https://store.steampowered.com/app/1996630/Dungeon_Keeper_Gold/).
 To get started with KeeperFX development, refer to the [Development Guide](https://github.com/dkfans/keeperfx/wiki/Building-KeeperFX) for 
 detailed instructions on setting up a development environment and building KeeperFX from source.
 Native Apple Silicon builds are documented in the [macOS build guide](docs/macos.md).
+The native handheld package is documented in the [PortMaster guide](portmaster/keeperfx/README.md).
 
 If you wish to discuss development, you can join the [Keeper Klan discord](https://discord.gg/hE4p7vy2Hb) and ask to 
 be added to the KeeperFX development channel.

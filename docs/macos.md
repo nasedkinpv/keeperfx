@@ -29,11 +29,22 @@ ad-hoc signed by default. A Developer ID build can be created with
 `CODESIGN_IDENTITY`; distribution also requires Apple's normal notarization
 workflow.
 
+Run the bundled build with:
+
+```sh
+open bin/KeeperFX.app
+```
+
+Use the app bundle for testing and distribution. It includes the SDL3 runtime
+used by Homebrew's current SDL2 compatibility library; running a copied bare
+executable without its Homebrew libraries can otherwise fail with an SDL3 load
+error. The raw `bin/keeperfx` executable remains useful for development.
+
 ## Game data
 
 KeeperFX still requires the original Dungeon Keeper files as proof of
-ownership. Install the complete KeeperFX data set and the required original
-files in:
+ownership. The app bundle reads the complete KeeperFX data set and the required
+original files from:
 
 ```text
 ~/Library/Application Support/KeeperFX
@@ -43,12 +54,33 @@ The required original files are listed in
 `docs/files_required_from_original_dk.txt`. They can be copied from an original
 CD or a legitimately purchased digital edition.
 
+The raw executable uses its current working directory. Set
+`KEEPERFX_DATA_DIR` to use the app's data directory while debugging it:
+
+```sh
+KEEPERFX_DATA_DIR="$HOME/Library/Application Support/KeeperFX" bin/keeperfx
+```
+
+Runtime settings, saves, and `keeperfx.log` are written to the same data
+directory.
+
 ## macOS controls and display
 
 The macOS defaults avoid Control+Arrow, which is reserved by Mission Control
 for switching Spaces. Hold Option with the arrow keys to rotate the camera, or
 use `[` and `]` as dedicated rotation keys. Bindings remain customizable in the
 in-game options.
+
+Windowed modes use KeeperFX's `w32` video-mode suffix. For example, these
+`keeperfx.cfg` values offer a 960x600 (3x) windowed game mode:
+
+```ini
+FRONTEND_RES=640x480w32 960x600w32 960x600w32
+INGAME_RES=960x600w32
+```
+
+Select a configured windowed resolution in Graphics Options to leave
+fullscreen.
 
 KeeperFX keeps its original 8-bit, palette-based software renderer. On macOS,
 a native Metal presenter uploads that indexed framebuffer as an `R8Uint`
@@ -73,10 +105,16 @@ defaults write org.keeperfx.KeeperFX MetalSaturation -float 1
 Delete an individual preference to restore its default. Changes take effect
 the next time KeeperFX starts.
 
+```sh
+defaults delete org.keeperfx.KeeperFX MetalSaturation
+defaults delete org.keeperfx.KeeperFX MetalContrast
+```
+
 KeeperFX's source art is SDR, so the presenter deliberately keeps it in the
 standard 0.0-to-1.0 sRGB range instead of stretching it into macOS EDR. The
-in-game brightness control applies the same hue-preserving palette tone curve
-on Metal and SDL renderers.
+in-game brightness control applies the same black-point-aware, hue-preserving
+palette tone curve on Metal and SDL renderers. This keeps the darkest palette
+entries black instead of lifting them into a green cast.
 
 For crisp graphics, prefer resolutions that are integer multiples of the
 original 320x200 frame, such as 1280x800 (4x) or 1600x1000 (5x). MetalFX is not
